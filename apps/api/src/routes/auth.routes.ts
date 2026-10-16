@@ -14,7 +14,9 @@ const credentials = z.object({
 });
 
 export async function authRoutes(app: FastifyInstance) {
-  app.post("/auth/register", async (req, reply) => {
+  const authLimit = { config: { rateLimit: { max: 10, timeWindow: "1 minute" } } };
+
+  app.post("/auth/register", authLimit, async (req, reply) => {
     const { email, password } = credentials.parse(req.body);
 
     const existing = await db.query.users.findFirst({ where: eq(users.email, email) });
@@ -29,7 +31,7 @@ export async function authRoutes(app: FastifyInstance) {
     return reply.code(201).send({ token, user });
   });
 
-  app.post("/auth/login", async (req, reply) => {
+  app.post("/auth/login", authLimit, async (req, reply) => {
     const { email, password } = credentials.parse(req.body);
 
     const user = await db.query.users.findFirst({ where: eq(users.email, email) });

@@ -2,6 +2,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import staticFiles from "@fastify/static";
+import rateLimit from "@fastify/rate-limit";
 import { resolve } from "path";
 import { authPlugin } from "./plugins/auth.js";
 import { errorsPlugin } from "./plugins/errors.js";
@@ -19,6 +20,8 @@ export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({ logger: true });
 
   await app.register(cors, { origin: true });
+  // Global rate limit: 300 req/min per IP. Auth routes get a tighter per-route limit below.
+  await app.register(rateLimit, { max: 300, timeWindow: "1 minute", keyGenerator: (req) => req.ip });
   await app.register(multipart, { limits: { fileSize: 50 * 1024 * 1024 } });
   await app.register(staticFiles, {
     root: resolve(env.UPLOADS_DIR),
