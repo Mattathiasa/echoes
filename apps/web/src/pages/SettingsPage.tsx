@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { Loader2, Download } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -39,6 +39,7 @@ export function SettingsPage() {
   const [confirmPw, setConfirmPw] = useState("");
   const [changingPw, setChangingPw] = useState(false);
 
+  const [exporting, setExporting] = useState(false);
   const [deleteConfirmPw, setDeleteConfirmPw] = useState("");
   const [showDeleteForm, setShowDeleteForm] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -88,7 +89,33 @@ export function SettingsPage() {
         </div>
       </section>
 
-      <section className="space-y-4">
+      <section className="space-y-4 border-t border-zinc-800 pt-8">
+        <div>
+          <h2 className="text-sm font-medium text-zinc-200">Data</h2>
+          <p className="text-xs text-zinc-500 mt-1">
+            Download all your journal entries as a JSON file.
+          </p>
+        </div>
+        <button
+          onClick={async () => {
+            setExporting(true);
+            try {
+              await api.export.download();
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : "Export failed");
+            } finally {
+              setExporting(false);
+            }
+          }}
+          disabled={exporting}
+          className="flex items-center gap-2 border border-zinc-700 hover:border-zinc-500 text-zinc-300 hover:text-zinc-100 disabled:opacity-50 px-4 py-2 rounded-lg text-sm transition-colors"
+        >
+          {exporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+          Export all entries
+        </button>
+      </section>
+
+      <section className="space-y-4 border-t border-zinc-800 pt-8">
         <h2 className="text-sm font-medium text-zinc-200">Change password</h2>
         <form onSubmit={handleChangePassword} className="space-y-3">
           <PasswordField

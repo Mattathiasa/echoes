@@ -131,4 +131,25 @@ export const api = {
   stats: {
     get: () => request<Stats>("/stats"),
   },
+  export: {
+    download: async () => {
+      const token = localStorage.getItem("echoes_token");
+      const res = await fetch(`${BASE_URL}/export`, {
+        headers: token ? { authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      const filename =
+        res.headers.get("content-disposition")?.match(/filename="([^"]+)"/)?.[1] ??
+        "echoes-export.json";
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    },
+  },
 };

@@ -11,6 +11,7 @@ import { audioRoutes } from "./routes/audio.routes.js";
 import { searchRoutes } from "./routes/search.routes.js";
 import { digestRoutes } from "./routes/digest.routes.js";
 import { statsRoutes } from "./routes/stats.routes.js";
+import { exportRoutes } from "./routes/export.routes.js";
 import { env } from "./env.js";
 
 export async function buildApp(): Promise<FastifyInstance> {
@@ -34,6 +35,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(searchRoutes);
   await app.register(digestRoutes);
   await app.register(statsRoutes);
+  await app.register(exportRoutes);
 
   return app;
 }
