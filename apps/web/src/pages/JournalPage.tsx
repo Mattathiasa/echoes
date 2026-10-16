@@ -115,6 +115,7 @@ export function JournalPage() {
   const [filter, setFilter] = useState("");
   const [playingId, setPlayingId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     api.entries
@@ -130,6 +131,22 @@ export function JournalPage() {
   useEffect(() => {
     return () => { audioRef.current?.pause(); };
   }, []);
+
+  // Infinite scroll: observe sentinel div; fire loadMore when it enters the viewport
+  useEffect(() => {
+    const canLoad = hasMore && !loadingMore;
+    if (!canLoad) return;
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry?.isIntersecting) loadMore(); },
+      { rootMargin: "300px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  // loadMore is stable enough here; hasMore/loadingMore gate re-creation
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasMore, loadingMore]);
 
   async function loadMore() {
     setLoadingMore(true);
@@ -278,15 +295,13 @@ export function JournalPage() {
         </div>
       ))}
 
-      {hasMore && (
-        <button
-          onClick={loadMore}
-          disabled={loadingMore}
-          className="w-full py-2.5 text-sm text-zinc-500 hover:text-zinc-300 border border-zinc-800 hover:border-zinc-700 rounded-lg transition-colors disabled:opacity-50"
-        >
-          {loadingMore ? "Loading…" : "Load more"}
-        </button>
+      {loadingMore && (
+        <div className="flex justify-center py-4">
+          <div className="w-5 h-5 rounded-full border-2 border-violet-400 border-t-transparent animate-spin" />
+        </div>
       )}
+
+      <div ref={sentinelRef} className="h-px" />
     </div>
   );
 }
