@@ -1,0 +1,23 @@
+node_modules/
+dist/
+.env
+.env.local
+
+# audio uploads — user data, never commit
+apps/api/uploads/
+
+# drizzle generated migrations (keep in version control if you want)
+# drizzle/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.user
+
+# Build
+*.tsbuildinfo
