@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Play, Pause, Trash2, Loader2, Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
-import { api, type Entry } from "../lib/api";
+import { api, type Entry, type SearchResult } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { formatDate, formatDuration } from "../lib/utils";
 
@@ -77,6 +77,7 @@ export function EntryDetailPage() {
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [related, setRelated] = useState<SearchResult[]>([]);
   const [editText, setEditText] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -84,7 +85,14 @@ export function EntryDetailPage() {
     if (!id) { navigate("/journal"); return; }
     api.entries
       .get(id)
-      .then(setEntry)
+      .then((e) => {
+        setEntry(e);
+        // Fetch related entries using the first ~100 words as the query
+        const query = e.transcript.trim().split(/\s+/).slice(0, 100).join(" ");
+        api.search.query(query, 4).then((results) => {
+          setRelated(results.filter((r) => r.id !== e.id).slice(0, 3));
+        }).catch(() => {});
+      })
       .catch(() => { toast.error("Entry not found"); navigate("/journal"); })
       .finally(() => setLoading(false));
   }, [id]);
@@ -216,6 +224,33 @@ export function EntryDetailPage() {
           </p>
         )}
       </div>
+
+      {related.length > 0 && (
+        <div className="space-y-3 border-t border-zinc-800 pt-6">
+          <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
+            Related memories
+          </p>
+          <div className="space-y-2">
+            {related.map((r) => (
+              <Link
+                key={r.id}
+                to={`/journal/${r.id}`}
+                className="block bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 rounded-xl p-4 space-y-1.5 transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-zinc-500">{formatDate(r.createdAt)}</span>
+                  <span className="text-xs font-mono px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400">
+                    {Math.round(r.score * 100)}%
+                  </span>
+                </div>
+                <p className="text-zinc-300 text-sm leading-relaxed line-clamp-2">
+                  {r.transcript}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
