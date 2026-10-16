@@ -68,6 +68,16 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ email, password }),
       }),
+    changePassword: (currentPassword: string, newPassword: string) =>
+      request<void>("/auth/password", {
+        method: "PATCH",
+        body: JSON.stringify({ currentPassword, newPassword }),
+      }),
+    deleteAccount: (password: string) =>
+      request<void>("/auth/account", {
+        method: "DELETE",
+        body: JSON.stringify({ password }),
+      }),
   },
   entries: {
     transcribe: (audioBlob: Blob) => {

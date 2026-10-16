@@ -10,6 +10,7 @@ import { JournalPage } from "./pages/JournalPage";
 import { SearchPage } from "./pages/SearchPage";
 import { DigestPage } from "./pages/DigestPage";
 import { EntryDetailPage } from "./pages/EntryDetailPage";
+import { SettingsPage } from "./pages/SettingsPage";
 
 export default function App() {
   return (
@@ -65,6 +66,16 @@ export default function App() {
               <ProtectedRoute>
                 <Layout>
                   <DigestPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <SettingsPage />
                 </Layout>
               </ProtectedRoute>
             }

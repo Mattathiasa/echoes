@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { Mic, BookOpen, Search, Sparkles, LogOut } from "lucide-react";
+import { Mic, BookOpen, Search, Sparkles, LogOut, Settings } from "lucide-react";
 import { useAuth } from "../lib/auth";
 import { cn } from "../lib/utils";
 import type { ReactNode } from "react";
@@ -25,7 +25,15 @@ export function Layout({ children }: { children: ReactNode }) {
       <header className="border-b border-zinc-800 px-4 py-3 flex items-center justify-between">
         <span className="font-semibold tracking-tight text-zinc-100">echoes</span>
         <div className="flex items-center gap-3 text-sm text-zinc-400">
-          <span>{user?.email}</span>
+          <span className="hidden sm:inline">{user?.email}</span>
+          <NavLink
+            to="/settings"
+            className={({ isActive }) =>
+              cn("hover:text-zinc-100 transition-colors", isActive && "text-violet-400")
+            }
+          >
+            <Settings size={16} />
+          </NavLink>
           <button onClick={handleLogout} className="hover:text-zinc-100 transition-colors">
             <LogOut size={16} />
           </button>
