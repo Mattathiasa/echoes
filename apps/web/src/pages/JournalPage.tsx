@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
-import { Trash2, Play, Pause, ChevronDown, ChevronUp } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Trash2, Play, Pause, ChevronDown, ChevronUp, Mic } from "lucide-react";
 import { toast } from "sonner";
 import { api, type Entry } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -166,9 +166,23 @@ export function JournalPage() {
 
   if (entries.length === 0) {
     return (
-      <div className="text-center py-20 text-zinc-500">
-        <p className="text-lg">No entries yet.</p>
-        <p className="text-sm mt-1">Record your first voice note to get started.</p>
+      <div className="flex flex-col items-center text-center py-24 gap-5">
+        <div className="w-16 h-16 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center">
+          <Mic size={28} className="text-zinc-600" />
+        </div>
+        <div className="space-y-1">
+          <p className="text-zinc-300 font-medium">Your journal is empty</p>
+          <p className="text-zinc-500 text-sm max-w-xs">
+            Record your first voice entry and it will appear here.
+          </p>
+        </div>
+        <Link
+          to="/"
+          className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
+        >
+          <Mic size={15} />
+          Start recording
+        </Link>
       </div>
     );
   }
@@ -188,7 +202,9 @@ export function JournalPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Your Journal</h1>
-        <span className="text-xs text-zinc-500">{entries.length} entries</span>
+        {entries.length > 0 && (
+          <span className="text-xs text-zinc-500">{entries.length}{hasMore ? "+" : ""} entries</span>
+        )}
       </div>
 
       {groups.map((group) => (

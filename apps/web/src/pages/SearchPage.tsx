@@ -83,6 +83,12 @@ export function SearchPage() {
         </button>
       </form>
 
+      {!searched && !loading && (
+        <p className="text-zinc-600 text-sm text-center py-10">
+          Try something like "times I felt stressed" or "creative ideas".
+        </p>
+      )}
+
       {searched && results.length === 0 && (
         <p className="text-zinc-500 text-sm text-center py-10">No matching entries found.</p>
       )}
