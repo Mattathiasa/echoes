@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 import type { User } from "./api";
 
 interface AuthState {
@@ -30,6 +30,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null);
     setUser(null);
   }
+
+  useEffect(() => {
+    function onForceLogout() {
+      setToken(null);
+      setUser(null);
+    }
+    window.addEventListener("echoes:logout", onForceLogout);
+    return () => window.removeEventListener("echoes:logout", onForceLogout);
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, token, login, logout }}>

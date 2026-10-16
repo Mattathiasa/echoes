@@ -16,6 +16,11 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 
   const res = await fetch(`${BASE_URL}${path}`, { ...init, headers });
   if (!res.ok) {
+    if (res.status === 401 && !path.startsWith("/auth/")) {
+      localStorage.removeItem("echoes_token");
+      localStorage.removeItem("echoes_user");
+      window.dispatchEvent(new Event("echoes:logout"));
+    }
     const err = await res.json().catch(() => ({ error: res.statusText }));
     throw new Error((err as { error: string }).error ?? "request failed");
   }
