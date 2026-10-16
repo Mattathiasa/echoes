@@ -1,8 +1,26 @@
 import { useState, type ReactNode } from "react";
-import { Search } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { api, type SearchResult } from "../lib/api";
 import { formatDate, formatDuration } from "../lib/utils";
+
+const STORAGE_KEY = "echoes_searches";
+const MAX_HISTORY = 5;
+
+function getHistory(): string[] {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]"); }
+  catch { return []; }
+}
+
+function saveToHistory(q: string) {
+  const prev = getHistory().filter((s) => s !== q);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify([q, ...prev].slice(0, MAX_HISTORY)));
+}
+
+function clearHistory() {
+  localStorage.removeItem(STORAGE_KEY);
+}
 
 function highlight(text: string, query: string): ReactNode {
   const words = query
@@ -37,21 +55,38 @@ export function SearchPage() {
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [lastQuery, setLastQuery] = useState("");
+  const [history, setHistory] = useState<string[]>(getHistory);
 
-  async function handleSearch(e: React.FormEvent) {
-    e.preventDefault();
-    if (!query.trim()) return;
+  async function runSearch(q: string) {
+    if (!q.trim()) return;
     setLoading(true);
     try {
-      const res = await api.search.query(query.trim());
+      const res = await api.search.query(q.trim());
       setResults(res);
-      setLastQuery(query.trim());
+      setLastQuery(q.trim());
       setSearched(true);
+      saveToHistory(q.trim());
+      setHistory(getHistory());
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Search failed");
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    runSearch(query);
+  }
+
+  function handleChip(q: string) {
+    setQuery(q);
+    runSearch(q);
+  }
+
+  function handleClearHistory() {
+    clearHistory();
+    setHistory([]);
   }
 
   return (
@@ -63,7 +98,7 @@ export function SearchPage() {
         </p>
       </div>
 
-      <form onSubmit={handleSearch} className="flex gap-2">
+      <form onSubmit={handleSubmit} className="flex gap-2">
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -83,7 +118,32 @@ export function SearchPage() {
         </button>
       </form>
 
-      {!searched && !loading && (
+      {history.length > 0 && !searched && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-zinc-500">Recent searches</p>
+            <button
+              onClick={handleClearHistory}
+              className="text-xs text-zinc-600 hover:text-zinc-400 flex items-center gap-1 transition-colors"
+            >
+              <X size={11} /> Clear
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {history.map((h) => (
+              <button
+                key={h}
+                onClick={() => handleChip(h)}
+                className="px-3 py-1 rounded-full text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors"
+              >
+                {h}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!searched && !loading && history.length === 0 && (
         <p className="text-zinc-600 text-sm text-center py-10">
           Try something like "times I felt stressed" or "creative ideas".
         </p>
@@ -101,9 +161,10 @@ export function SearchPage() {
 
       <div className="space-y-3">
         {results.map((result) => (
-          <div
+          <Link
             key={result.id}
-            className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-2"
+            to={`/journal/${result.id}`}
+            className="block bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 rounded-xl p-4 space-y-2 transition-colors"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-xs text-zinc-500">
@@ -121,7 +182,7 @@ export function SearchPage() {
             <p className="text-zinc-300 text-sm leading-relaxed">
               {highlight(result.transcript, lastQuery)}
             </p>
-          </div>
+          </Link>
         ))}
       </div>
     </div>
