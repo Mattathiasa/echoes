@@ -26,6 +26,8 @@ export function RecordPage() {
   const [flashes, setFlashes] = useState<MemoryFlash[]>([]);
   const [activity, setActivity] = useState<{ date: string; count: number }[]>([]);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const MAX_SECS = 600;
+  const WARN_SECS = 300;
 
   useEffect(() => {
     api.stats.get().then(setStats).catch(() => {});
@@ -61,10 +63,16 @@ export function RecordPage() {
   async function handleStart() {
     await startRecording();
     const start = Date.now();
-    intervalRef.current = setInterval(
-      () => setElapsed(Math.floor((Date.now() - start) / 1000)),
-      500,
-    );
+    intervalRef.current = setInterval(() => {
+      const secs = Math.floor((Date.now() - start) / 1000);
+      setElapsed(secs);
+      if (secs === WARN_SECS) {
+        toast.warning("5 minutes recorded — auto-stops at 10 min");
+      }
+      if (secs >= MAX_SECS) {
+        handleStop();
+      }
+    }, 500);
     setPhase("recording");
   }
 
@@ -169,9 +177,12 @@ export function RecordPage() {
         )}
 
         {isRecording && (
-          <p className="text-zinc-400 tabular-nums text-sm">
+          <p className={cn("tabular-nums text-sm", elapsed >= WARN_SECS ? "text-amber-400" : "text-zinc-400")}>
             {String(Math.floor(elapsed / 60)).padStart(2, "0")}:
             {String(elapsed % 60).padStart(2, "0")}
+            {elapsed >= WARN_SECS && (
+              <span className="ml-2 text-xs">/ 10:00</span>
+            )}
           </p>
         )}
 
