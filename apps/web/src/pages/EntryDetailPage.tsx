@@ -140,8 +140,30 @@ export function EntryDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-20">
-        <div className="w-6 h-6 rounded-full border-2 border-violet-400 border-t-transparent animate-spin" />
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-zinc-800 animate-pulse shrink-0" />
+          <div className="h-4 w-40 bg-zinc-800 rounded animate-pulse" />
+        </div>
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-zinc-800 animate-pulse shrink-0" />
+            <div className="flex-1 space-y-2">
+              <div className="h-1.5 w-full bg-zinc-800 rounded-full animate-pulse" />
+              <div className="flex justify-between">
+                <div className="h-3 w-8 bg-zinc-800 rounded animate-pulse" />
+                <div className="h-3 w-8 bg-zinc-800 rounded animate-pulse" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <div className="h-3.5 w-full bg-zinc-800 rounded animate-pulse" />
+          <div className="h-3.5 w-5/6 bg-zinc-800 rounded animate-pulse" />
+          <div className="h-3.5 w-4/6 bg-zinc-800 rounded animate-pulse" />
+          <div className="h-3.5 w-full bg-zinc-800 rounded animate-pulse" />
+          <div className="h-3.5 w-3/4 bg-zinc-800 rounded animate-pulse" />
+        </div>
       </div>
     );
   }
