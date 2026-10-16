@@ -1,0 +1,37 @@
+import Fastify, { type FastifyInstance } from "fastify";
+import cors from "@fastify/cors";
+import multipart from "@fastify/multipart";
+import staticFiles from "@fastify/static";
+import { resolve } from "path";
+import { authPlugin } from "./plugins/auth.js";
+import { errorsPlugin } from "./plugins/errors.js";
+import { authRoutes } from "./routes/auth.routes.js";
+import { entriesRoutes } from "./routes/entries.routes.js";
+import { audioRoutes } from "./routes/audio.routes.js";
+import { searchRoutes } from "./routes/search.routes.js";
+import { digestRoutes } from "./routes/digest.routes.js";
+import { env } from "./env.js";
+
+export async function buildApp(): Promise<FastifyInstance> {
+  const app = Fastify({ logger: true });
+
+  await app.register(cors, { origin: true });
+  await app.register(multipart, { limits: { fileSize: 50 * 1024 * 1024 } });
+  await app.register(staticFiles, {
+    root: resolve(env.UPLOADS_DIR),
+    prefix: "/uploads/",
+    serve: false,
+  });
+  await app.register(errorsPlugin);
+  await app.register(authPlugin);
+
+  app.get("/health", async () => ({ ok: true }));
+
+  await app.register(authRoutes);
+  await app.register(entriesRoutes);
+  await app.register(audioRoutes);
+  await app.register(searchRoutes);
+  await app.register(digestRoutes);
+
+  return app;
+}
