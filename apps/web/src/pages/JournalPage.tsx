@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Trash2, Play, Pause, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import { api, type Entry } from "../lib/api";
@@ -29,11 +30,15 @@ function EntryCard({
   onPlay: () => void;
   onDelete: () => void;
 }) {
+  const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
   const isLong = entry.transcript.length > 240;
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
+    <div
+      onClick={() => navigate(`/journal/${entry.id}`)}
+      className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3 cursor-pointer hover:border-zinc-700 transition-colors"
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-xs text-zinc-500">
           <span>{formatDate(entry.createdAt)}</span>
@@ -42,14 +47,14 @@ function EntryCard({
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={onPlay}
+            onClick={(e) => { e.stopPropagation(); onPlay(); }}
             className="text-zinc-400 hover:text-violet-400 transition-colors"
             title={isPlaying ? "Pause" : "Play"}
           >
             {isPlaying ? <Pause size={15} /> : <Play size={15} />}
           </button>
           <button
-            onClick={onDelete}
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
             className="text-zinc-600 hover:text-red-400 transition-colors"
             title="Delete entry"
           >
@@ -64,7 +69,7 @@ function EntryCard({
 
       {isLong && (
         <button
-          onClick={() => setExpanded((v) => !v)}
+          onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v); }}
           className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
         >
           {expanded ? (

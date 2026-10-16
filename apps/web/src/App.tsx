@@ -9,6 +9,7 @@ import { RecordPage } from "./pages/RecordPage";
 import { JournalPage } from "./pages/JournalPage";
 import { SearchPage } from "./pages/SearchPage";
 import { DigestPage } from "./pages/DigestPage";
+import { EntryDetailPage } from "./pages/EntryDetailPage";
 
 export default function App() {
   return (
@@ -34,6 +35,16 @@ export default function App() {
               <ProtectedRoute>
                 <Layout>
                   <JournalPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/journal/:id"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <EntryDetailPage />
                 </Layout>
               </ProtectedRoute>
             }
