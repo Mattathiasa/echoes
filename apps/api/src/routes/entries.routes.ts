@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { mkdir, unlink } from "fs/promises";
 import { join } from "path";
 import { randomUUID } from "crypto";
@@ -87,6 +87,18 @@ export async function entriesRoutes(app: FastifyInstance) {
     });
 
     return rows;
+  });
+
+  // Must be registered before /entries/:id so the static segment wins
+  app.get("/entries/random", { preHandler: [app.authenticate] }, async (req, reply) => {
+    const [entry] = await db
+      .select()
+      .from(entries)
+      .where(eq(entries.userId, req.userId))
+      .orderBy(sql`random()`)
+      .limit(1);
+    if (!entry) return reply.code(404).send({ error: "no_entries" });
+    return entry;
   });
 
   app.get("/entries/:id", { preHandler: [app.authenticate] }, async (req, reply) => {

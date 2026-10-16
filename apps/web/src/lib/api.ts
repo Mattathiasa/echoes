@@ -108,6 +108,7 @@ export const api = {
     list: (limit = 20, offset = 0) =>
       request<Entry[]>(`/entries?limit=${limit}&offset=${offset}`),
     get: (id: string) => request<Entry>(`/entries/${id}`),
+    random: () => request<Entry>("/entries/random"),
     update: (id: string, transcript: string) =>
       request<Entry>(`/entries/${id}`, {
         method: "PATCH",

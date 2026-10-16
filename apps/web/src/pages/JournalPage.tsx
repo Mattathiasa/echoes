@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Trash2, Play, Pause, ChevronDown, ChevronUp, Mic, X } from "lucide-react";
+import { Trash2, Play, Pause, ChevronDown, ChevronUp, Mic, X, Shuffle } from "lucide-react";
 import { toast } from "sonner";
 import { api, type Entry } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -107,6 +107,7 @@ function EntryCard({
 }
 
 export function JournalPage() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -248,13 +249,29 @@ export function JournalPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Your Journal</h1>
-        <span className="text-xs text-zinc-500">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={async () => {
+              try {
+                const entry = await api.entries.random();
+                navigate(`/journal/${entry.id}`);
+              } catch {
+                toast.error("No entries to shuffle");
+              }
+            }}
+            title="Surprise me"
+            className="text-zinc-500 hover:text-zinc-200 transition-colors"
+          >
+            <Shuffle size={15} />
+          </button>
+          <span className="text-xs text-zinc-500">
           {needle
             ? `${filteredEntries.length} of ${entries.length}${hasMore ? "+" : ""}`
             : entries.length > 0
               ? `${entries.length}${hasMore ? "+" : ""} entries`
               : null}
-        </span>
+          </span>
+        </div>
       </div>
 
       <div className="relative">
