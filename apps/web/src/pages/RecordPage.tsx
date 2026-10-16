@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Mic, Square, Loader2, Check, RotateCcw, Flame } from "lucide-react";
 import { toast } from "sonner";
 import { useRecorder } from "../hooks/useRecorder";
-import { api, type Stats } from "../lib/api";
-import { formatDuration, cn } from "../lib/utils";
+import { api, type Stats, type MemoryFlash } from "../lib/api";
+import { formatDate, formatDuration, cn } from "../lib/utils";
 
 type Phase = "idle" | "recording" | "transcribing" | "preview" | "saving";
 
@@ -22,10 +22,12 @@ export function RecordPage() {
   const [preview, setPreview] = useState<PreviewData | null>(null);
   const [editedTranscript, setEditedTranscript] = useState("");
   const [stats, setStats] = useState<Stats | null>(null);
+  const [flashes, setFlashes] = useState<MemoryFlash[]>([]);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     api.stats.get().then(setStats).catch(() => {});
+    api.memories.flash().then(setFlashes).catch(() => {});
   }, []);
 
   function clearTimer() {
@@ -91,18 +93,15 @@ export function RecordPage() {
             Edit the transcript if Whisper got anything wrong, then save.
           </p>
         </div>
-
         <div className="flex items-center gap-2 text-xs text-zinc-500">
           <span>{formatDuration(preview.durationSecs)}</span>
         </div>
-
         <textarea
           value={editedTranscript}
           onChange={(e) => setEditedTranscript(e.target.value)}
           rows={10}
           className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-sm text-zinc-200 leading-relaxed focus:outline-none focus:ring-1 focus:ring-violet-500 resize-none"
         />
-
         <div className="flex gap-3">
           <button
             onClick={handleSave}
@@ -128,74 +127,101 @@ export function RecordPage() {
   const isBusy = phase === "transcribing" || phase === "saving" || recorderState === "processing";
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-10">
-      <div className="text-center">
-        <h1 className="text-2xl font-semibold">What's on your mind?</h1>
-        <p className="text-zinc-500 text-sm mt-1">
-          {isRecording ? "Tap the square to stop." : "Tap the mic to start recording."}
-        </p>
+    <div className="space-y-10">
+      <div className="flex flex-col items-center justify-center min-h-[50vh] gap-10">
+        <div className="text-center">
+          <h1 className="text-2xl font-semibold">What's on your mind?</h1>
+          <p className="text-zinc-500 text-sm mt-1">
+            {isRecording ? "Tap the square to stop." : "Tap the mic to start recording."}
+          </p>
+        </div>
+
+        {isRecording && (
+          <div className="flex items-end gap-0.5 h-12">
+            {audioLevels.map((level, i) => (
+              <div
+                key={i}
+                className="w-1.5 bg-violet-400 rounded-full transition-all duration-75"
+                style={{ height: `${Math.max(4, level * 48)}px` }}
+              />
+            ))}
+          </div>
+        )}
+
+        {isRecording && (
+          <p className="text-zinc-400 tabular-nums text-sm">
+            {String(Math.floor(elapsed / 60)).padStart(2, "0")}:
+            {String(elapsed % 60).padStart(2, "0")}
+          </p>
+        )}
+
+        <button
+          onClick={isRecording ? handleStop : handleStart}
+          disabled={isBusy}
+          className={cn(
+            "w-24 h-24 rounded-full flex items-center justify-center transition-all shadow-lg",
+            isRecording
+              ? "bg-red-500 hover:bg-red-600 scale-110"
+              : "bg-violet-600 hover:bg-violet-500",
+            isBusy && "opacity-50 cursor-not-allowed scale-100",
+          )}
+        >
+          {isBusy ? (
+            <Loader2 size={32} className="animate-spin text-white" />
+          ) : isRecording ? (
+            <Square size={28} className="text-white" fill="white" />
+          ) : (
+            <Mic size={32} className="text-white" />
+          )}
+        </button>
+
+        {phase === "transcribing" && (
+          <p className="text-zinc-500 text-sm animate-pulse">Transcribing your entry…</p>
+        )}
+        {phase === "saving" && (
+          <p className="text-zinc-500 text-sm animate-pulse">Saving…</p>
+        )}
+
+        {!isRecording && !isBusy && stats && stats.totalEntries > 0 && (
+          <div className="flex items-center gap-5 text-xs text-zinc-500">
+            {stats.streakDays > 0 && (
+              <span className="flex items-center gap-1">
+                <Flame size={13} className="text-orange-400" />
+                {stats.streakDays}d streak
+              </span>
+            )}
+            <span>{stats.weekEntries} this week</span>
+            <span>{formatDuration(stats.totalDurationSecs)} total</span>
+          </div>
+        )}
+
+        {error && <p className="text-red-400 text-sm text-center max-w-xs">{error}</p>}
       </div>
 
-      {isRecording && (
-        <div className="flex items-end gap-0.5 h-12">
-          {audioLevels.map((level, i) => (
-            <div
-              key={i}
-              className="w-1.5 bg-violet-400 rounded-full transition-all duration-75"
-              style={{ height: `${Math.max(4, level * 48)}px` }}
-            />
-          ))}
+      {phase === "idle" && flashes.length > 0 && (
+        <div className="space-y-3">
+          <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider px-1">
+            Memories
+          </p>
+          <div className="space-y-2">
+            {flashes.map(({ label, entry }) => (
+              <Link
+                key={entry.id}
+                to={`/journal/${entry.id}`}
+                className="block bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 rounded-xl p-4 space-y-1.5 transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-violet-400">{label}</span>
+                  <span className="text-xs text-zinc-500">{formatDate(entry.createdAt)}</span>
+                </div>
+                <p className="text-zinc-300 text-sm leading-relaxed line-clamp-2">
+                  {entry.transcript}
+                </p>
+              </Link>
+            ))}
+          </div>
         </div>
       )}
-
-      {isRecording && (
-        <p className="text-zinc-400 tabular-nums text-sm">
-          {String(Math.floor(elapsed / 60)).padStart(2, "0")}:
-          {String(elapsed % 60).padStart(2, "0")}
-        </p>
-      )}
-
-      <button
-        onClick={isRecording ? handleStop : handleStart}
-        disabled={isBusy}
-        className={cn(
-          "w-24 h-24 rounded-full flex items-center justify-center transition-all shadow-lg",
-          isRecording
-            ? "bg-red-500 hover:bg-red-600 scale-110"
-            : "bg-violet-600 hover:bg-violet-500",
-          isBusy && "opacity-50 cursor-not-allowed scale-100",
-        )}
-      >
-        {isBusy ? (
-          <Loader2 size={32} className="animate-spin text-white" />
-        ) : isRecording ? (
-          <Square size={28} className="text-white" fill="white" />
-        ) : (
-          <Mic size={32} className="text-white" />
-        )}
-      </button>
-
-      {phase === "transcribing" && (
-        <p className="text-zinc-500 text-sm animate-pulse">Transcribing your entry…</p>
-      )}
-      {phase === "saving" && (
-        <p className="text-zinc-500 text-sm animate-pulse">Saving…</p>
-      )}
-
-      {!isRecording && !isBusy && stats && stats.totalEntries > 0 && (
-        <div className="flex items-center gap-5 text-xs text-zinc-500">
-          {stats.streakDays > 0 && (
-            <span className="flex items-center gap-1">
-              <Flame size={13} className="text-orange-400" />
-              {stats.streakDays}d streak
-            </span>
-          )}
-          <span>{stats.weekEntries} this week</span>
-          <span>{formatDuration(stats.totalDurationSecs)} total</span>
-        </div>
-      )}
-
-      {error && <p className="text-red-400 text-sm text-center max-w-xs">{error}</p>}
     </div>
   );
 }

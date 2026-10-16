@@ -56,6 +56,11 @@ export interface Stats {
   streakDays: number;
 }
 
+export interface MemoryFlash {
+  label: string;
+  entry: Entry;
+}
+
 export const api = {
   auth: {
     register: (email: string, password: string) =>
@@ -130,6 +135,9 @@ export const api = {
   },
   stats: {
     get: () => request<Stats>("/stats"),
+  },
+  memories: {
+    flash: () => request<MemoryFlash[]>("/memories/flash"),
   },
   export: {
     download: async () => {
