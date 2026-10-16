@@ -1,9 +1,9 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Mic, Square, Loader2, Check, RotateCcw } from "lucide-react";
+import { Mic, Square, Loader2, Check, RotateCcw, Flame } from "lucide-react";
 import { toast } from "sonner";
 import { useRecorder } from "../hooks/useRecorder";
-import { api } from "../lib/api";
+import { api, type Stats } from "../lib/api";
 import { formatDuration, cn } from "../lib/utils";
 
 type Phase = "idle" | "recording" | "transcribing" | "preview" | "saving";
@@ -21,7 +21,12 @@ export function RecordPage() {
   const [elapsed, setElapsed] = useState(0);
   const [preview, setPreview] = useState<PreviewData | null>(null);
   const [editedTranscript, setEditedTranscript] = useState("");
+  const [stats, setStats] = useState<Stats | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    api.stats.get().then(setStats).catch(() => {});
+  }, []);
 
   function clearTimer() {
     if (intervalRef.current !== null) {
@@ -175,6 +180,19 @@ export function RecordPage() {
       )}
       {phase === "saving" && (
         <p className="text-zinc-500 text-sm animate-pulse">Saving…</p>
+      )}
+
+      {!isRecording && !isBusy && stats && stats.totalEntries > 0 && (
+        <div className="flex items-center gap-5 text-xs text-zinc-500">
+          {stats.streakDays > 0 && (
+            <span className="flex items-center gap-1">
+              <Flame size={13} className="text-orange-400" />
+              {stats.streakDays}d streak
+            </span>
+          )}
+          <span>{stats.weekEntries} this week</span>
+          <span>{formatDuration(stats.totalDurationSecs)} total</span>
+        </div>
       )}
 
       {error && <p className="text-red-400 text-sm text-center max-w-xs">{error}</p>}

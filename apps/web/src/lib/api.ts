@@ -49,6 +49,13 @@ export interface Digest {
   createdAt: string;
 }
 
+export interface Stats {
+  totalEntries: number;
+  totalDurationSecs: number;
+  weekEntries: number;
+  streakDays: number;
+}
+
 export const api = {
   auth: {
     register: (email: string, password: string) =>
@@ -105,5 +112,8 @@ export const api = {
     get: () => request<Digest>("/digest"),
     list: () => request<Digest[]>("/digests"),
     generate: () => request<Digest>("/digest/generate", { method: "POST" }),
+  },
+  stats: {
+    get: () => request<Stats>("/stats"),
   },
 };
