@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Play, Pause, Trash2, Loader2, Pencil, Check, X } from "lucide-react";
+import { ArrowLeft, Play, Pause, Trash2, Loader2, Pencil, Check, X, Copy, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { api, type Entry, type SearchResult } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -202,13 +202,39 @@ export function EntryDetailPage() {
             <span>{wordCount} words</span>
           </div>
           {!editing && (
-            <button
-              onClick={startEdit}
-              className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-violet-400 transition-colors"
-            >
-              <Pencil size={13} />
-              Edit
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={async () => {
+                  await navigator.clipboard.writeText(entry.transcript);
+                  toast.success("Copied to clipboard");
+                }}
+                className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                title="Copy transcript"
+              >
+                <Copy size={13} />
+              </button>
+              {typeof navigator.share === "function" && (
+                <button
+                  onClick={() =>
+                    navigator.share({
+                      title: `echoes — ${formatDate(entry.createdAt)}`,
+                      text: entry.transcript,
+                    }).catch(() => {})
+                  }
+                  className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                  title="Share"
+                >
+                  <Share2 size={13} />
+                </button>
+              )}
+              <button
+                onClick={startEdit}
+                className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-violet-400 transition-colors"
+              >
+                <Pencil size={13} />
+                Edit
+              </button>
+            </div>
           )}
         </div>
 
