@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Mic, Square, Loader2, Check, RotateCcw, Flame } from "lucide-react";
+import { ActivityHeatmap } from "../components/ActivityHeatmap";
 import { toast } from "sonner";
 import { useRecorder } from "../hooks/useRecorder";
 import { api, type Stats, type MemoryFlash } from "../lib/api";
@@ -23,11 +24,13 @@ export function RecordPage() {
   const [editedTranscript, setEditedTranscript] = useState("");
   const [stats, setStats] = useState<Stats | null>(null);
   const [flashes, setFlashes] = useState<MemoryFlash[]>([]);
+  const [activity, setActivity] = useState<{ date: string; count: number }[]>([]);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     api.stats.get().then(setStats).catch(() => {});
     api.memories.flash().then(setFlashes).catch(() => {});
+    api.stats.activity().then(setActivity).catch(() => {});
   }, []);
 
   // Space bar starts/stops recording when focus is not in a text field
@@ -218,6 +221,10 @@ export function RecordPage() {
 
         {error && <p className="text-red-400 text-sm text-center max-w-xs">{error}</p>}
       </div>
+
+      {phase === "idle" && stats && stats.totalEntries > 0 && (
+        <ActivityHeatmap data={activity} />
+      )}
 
       {phase === "idle" && flashes.length > 0 && (
         <div className="space-y-3">

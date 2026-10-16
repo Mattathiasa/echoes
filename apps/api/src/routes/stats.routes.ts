@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { sql, eq, gte, and, desc } from "drizzle-orm";
+import { sql, eq, gte, and, desc, lte } from "drizzle-orm";
 import { db } from "../db/client.js";
 import { entries } from "../db/schema.js";
 
@@ -63,5 +63,21 @@ export async function statsRoutes(app: FastifyInstance) {
       weekEntries: weekRow?.count ?? 0,
       streakDays,
     };
+  });
+
+  app.get("/stats/activity", { preHandler: [app.authenticate] }, async (req) => {
+    const since = new Date(Date.now() - 16 * 7 * 86_400_000);
+
+    const rows = await db
+      .select({
+        date: sql<string>`(${entries.createdAt} AT TIME ZONE 'UTC')::date::text`,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(entries)
+      .where(and(eq(entries.userId, req.userId), gte(entries.createdAt, since)))
+      .groupBy(sql`(${entries.createdAt} AT TIME ZONE 'UTC')::date`)
+      .orderBy(sql`(${entries.createdAt} AT TIME ZONE 'UTC')::date`);
+
+    return rows;
   });
 }

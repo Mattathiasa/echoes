@@ -136,6 +136,7 @@ export const api = {
   },
   stats: {
     get: () => request<Stats>("/stats"),
+    activity: () => request<{ date: string; count: number }[]>("/stats/activity"),
   },
   memories: {
     flash: () => request<MemoryFlash[]>("/memories/flash"),
