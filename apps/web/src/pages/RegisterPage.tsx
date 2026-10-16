@@ -17,7 +17,7 @@ export function RegisterPage() {
     try {
       const { token, user } = await api.auth.register(email, password);
       login(token, user);
-      navigate("/");
+      navigate("/record");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Registration failed");
     } finally {

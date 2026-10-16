@@ -5,7 +5,7 @@ import { cn } from "../lib/utils";
 import type { ReactNode } from "react";
 
 const nav = [
-  { to: "/", icon: Mic, label: "Record" },
+  { to: "/record", icon: Mic, label: "Record" },
   { to: "/journal", icon: BookOpen, label: "Journal" },
   { to: "/search", icon: Search, label: "Search" },
   { to: "/digest", icon: Sparkles, label: "Digest" },
@@ -47,7 +47,7 @@ export function Layout({ children }: { children: ReactNode }) {
           <NavLink
             key={to}
             to={to}
-            end={to === "/"}
+            end={to === "/record"}
             className={({ isActive }) =>
               cn(
                 "flex-1 flex flex-col items-center gap-1 py-3 text-xs transition-colors",

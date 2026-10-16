@@ -17,7 +17,7 @@ export function LoginPage() {
     try {
       const { token, user } = await api.auth.login(email, password);
       login(token, user);
-      navigate("/");
+      navigate("/record");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Login failed");
     } finally {

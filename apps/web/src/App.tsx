@@ -1,9 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
-import { AuthProvider } from "./lib/auth";
+import { AuthProvider, useAuth } from "./lib/auth";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { Layout } from "./components/Layout";
+import { LandingPage } from "./pages/LandingPage";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { RecordPage } from "./pages/RecordPage";
@@ -13,6 +14,12 @@ import { DigestPage } from "./pages/DigestPage";
 import { EntryDetailPage } from "./pages/EntryDetailPage";
 import { SettingsPage } from "./pages/SettingsPage";
 
+function HomeRoute() {
+  const { token } = useAuth();
+  if (token) return <Navigate to="/record" replace />;
+  return <LandingPage />;
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
@@ -20,10 +27,11 @@ export default function App() {
       <BrowserRouter>
         <Toaster theme="dark" position="top-center" richColors />
         <Routes>
+          <Route path="/" element={<HomeRoute />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route
-            path="/"
+            path="/record"
             element={
               <ProtectedRoute>
                 <Layout>
