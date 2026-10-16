@@ -32,11 +32,12 @@ function EntryCard({
 }) {
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const isLong = entry.transcript.length > 240;
 
   return (
     <div
-      onClick={() => navigate(`/journal/${entry.id}`)}
+      onClick={() => !confirmDelete && navigate(`/journal/${entry.id}`)}
       className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3 cursor-pointer hover:border-zinc-700 transition-colors"
     >
       <div className="flex items-center justify-between">
@@ -54,7 +55,7 @@ function EntryCard({
             {isPlaying ? <Pause size={15} /> : <Play size={15} />}
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
             className="text-zinc-600 hover:text-red-400 transition-colors"
             title="Delete entry"
           >
@@ -63,21 +64,43 @@ function EntryCard({
         </div>
       </div>
 
-      <p className="text-zinc-300 text-sm leading-relaxed">
-        {expanded || !isLong ? entry.transcript : entry.transcript.slice(0, 240) + "…"}
-      </p>
-
-      {isLong && (
-        <button
-          onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v); }}
-          className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+      {confirmDelete ? (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="flex items-center gap-3 pt-1"
         >
-          {expanded ? (
-            <><ChevronUp size={13} /> Show less</>
-          ) : (
-            <><ChevronDown size={13} /> Read more</>
+          <span className="text-xs text-zinc-400 flex-1">Delete this entry?</span>
+          <button
+            onClick={() => onDelete()}
+            className="text-xs text-red-400 hover:text-red-300 font-medium transition-colors"
+          >
+            Yes, delete
+          </button>
+          <button
+            onClick={() => setConfirmDelete(false)}
+            className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <>
+          <p className="text-zinc-300 text-sm leading-relaxed">
+            {expanded || !isLong ? entry.transcript : entry.transcript.slice(0, 240) + "…"}
+          </p>
+          {isLong && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v); }}
+              className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+            >
+              {expanded ? (
+                <><ChevronUp size={13} /> Show less</>
+              ) : (
+                <><ChevronDown size={13} /> Read more</>
+              )}
+            </button>
           )}
-        </button>
+        </>
       )}
     </div>
   );

@@ -76,6 +76,7 @@ export function EntryDetailPage() {
   const [entry, setEntry] = useState<Entry | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [editing, setEditing] = useState(false);
   const [related, setRelated] = useState<SearchResult[]>([]);
   const [editText, setEditText] = useState("");
@@ -161,14 +162,34 @@ export function EntryDetailPage() {
         <div className="flex-1 min-w-0">
           <p className="text-sm text-zinc-400">{formatDate(entry.createdAt)}</p>
         </div>
-        <button
-          onClick={handleDelete}
-          disabled={deleting || editing}
-          className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-red-400 disabled:opacity-50 transition-colors"
-        >
-          {deleting ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
-          Delete
-        </button>
+        {confirmDelete ? (
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-zinc-400">Delete this entry?</span>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 font-medium disabled:opacity-50 transition-colors"
+            >
+              {deleting && <Loader2 size={12} className="animate-spin" />}
+              Yes
+            </button>
+            <button
+              onClick={() => setConfirmDelete(false)}
+              className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setConfirmDelete(true)}
+            disabled={editing}
+            className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-red-400 disabled:opacity-50 transition-colors"
+          >
+            <Trash2 size={15} />
+            Delete
+          </button>
+        )}
       </div>
 
       <AudioPlayer src={api.audio.url(user.id, entry.audioPath)} />
