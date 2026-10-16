@@ -30,6 +30,23 @@ export function RecordPage() {
     api.memories.flash().then(setFlashes).catch(() => {});
   }, []);
 
+  // Space bar starts/stops recording when focus is not in a text field
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.code !== "Space" || e.repeat) return;
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "BUTTON") return;
+      if ((e.target as HTMLElement).isContentEditable) return;
+      e.preventDefault();
+      if (phase === "idle") handleStart();
+      else if (phase === "recording") handleStop();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  // handleStart/handleStop are stable within a given phase; re-register on phase change
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+
   function clearTimer() {
     if (intervalRef.current !== null) {
       clearInterval(intervalRef.current);
@@ -193,6 +210,10 @@ export function RecordPage() {
             <span>{stats.weekEntries} this week</span>
             <span>{formatDuration(stats.totalDurationSecs)} total</span>
           </div>
+        )}
+
+        {!isRecording && !isBusy && (
+          <p className="text-zinc-700 text-xs">Press Space to record</p>
         )}
 
         {error && <p className="text-red-400 text-sm text-center max-w-xs">{error}</p>}
