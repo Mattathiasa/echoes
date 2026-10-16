@@ -6,12 +6,16 @@ import { api, type Entry, type SearchResult } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { formatDate, formatDuration } from "../lib/utils";
 
+const SPEEDS = [1, 1.5, 2] as const;
+type Speed = (typeof SPEEDS)[number];
+
 function AudioPlayer({ src }: { src: string }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [ready, setReady] = useState(false);
+  const [speed, setSpeed] = useState<Speed>(1);
 
   useEffect(() => {
     const audio = new Audio(src);
@@ -33,6 +37,12 @@ function AudioPlayer({ src }: { src: string }) {
     const t = parseFloat(e.target.value);
     if (audioRef.current) audioRef.current.currentTime = t;
     setCurrentTime(t);
+  }
+
+  function cycleSpeed() {
+    const next = SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length] as Speed;
+    setSpeed(next);
+    if (audioRef.current) audioRef.current.playbackRate = next;
   }
 
   const pct = duration > 0 ? (currentTime / duration) * 100 : 0;
@@ -61,7 +71,17 @@ function AudioPlayer({ src }: { src: string }) {
           />
           <div className="flex justify-between text-xs text-zinc-500 tabular-nums">
             <span>{formatDuration(Math.floor(currentTime))}</span>
-            <span>{formatDuration(Math.floor(duration))}</span>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={cycleSpeed}
+                disabled={!ready}
+                className="font-mono text-zinc-500 hover:text-violet-400 disabled:opacity-40 transition-colors tabular-nums"
+                title="Cycle playback speed"
+              >
+                {speed}×
+              </button>
+              <span>{formatDuration(Math.floor(duration))}</span>
+            </div>
           </div>
         </div>
       </div>
