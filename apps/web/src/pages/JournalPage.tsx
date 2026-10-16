@@ -1,22 +1,126 @@
-import { useState, useEffect } from "react";
-import { Trash2, Play, Pause } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Trash2, Play, Pause, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import { api, type Entry } from "../lib/api";
 import { useAuth } from "../lib/auth";
-import { formatDate, formatDuration, cn } from "../lib/utils";
+import { formatDate, formatDuration } from "../lib/utils";
+
+const PAGE_SIZE = 20;
+
+function dateGroup(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const diffDays = Math.floor((now.getTime() - d.getTime()) / 86_400_000);
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return "This week";
+  if (diffDays < 30) return "This month";
+  return d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+}
+
+function EntryCard({
+  entry,
+  isPlaying,
+  onPlay,
+  onDelete,
+}: {
+  entry: Entry;
+  isPlaying: boolean;
+  onPlay: () => void;
+  onDelete: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = entry.transcript.length > 240;
+
+  return (
+    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xs text-zinc-500">
+          <span>{formatDate(entry.createdAt)}</span>
+          <span>·</span>
+          <span>{formatDuration(entry.durationSecs)}</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onPlay}
+            className="text-zinc-400 hover:text-violet-400 transition-colors"
+            title={isPlaying ? "Pause" : "Play"}
+          >
+            {isPlaying ? <Pause size={15} /> : <Play size={15} />}
+          </button>
+          <button
+            onClick={onDelete}
+            className="text-zinc-600 hover:text-red-400 transition-colors"
+            title="Delete entry"
+          >
+            <Trash2 size={15} />
+          </button>
+        </div>
+      </div>
+
+      <p className="text-zinc-300 text-sm leading-relaxed">
+        {expanded || !isLong ? entry.transcript : entry.transcript.slice(0, 240) + "…"}
+      </p>
+
+      {isLong && (
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+        >
+          {expanded ? (
+            <><ChevronUp size={13} /> Show less</>
+          ) : (
+            <><ChevronDown size={13} /> Read more</>
+          )}
+        </button>
+      )}
+    </div>
+  );
+}
 
 export function JournalPage() {
   const { user } = useAuth();
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
-  const audioRef = useState<HTMLAudioElement | null>(null)[0];
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    api.entries.list().then(setEntries).catch(() => toast.error("Failed to load entries")).finally(() => setLoading(false));
+    api.entries
+      .list(PAGE_SIZE, 0)
+      .then((rows) => {
+        setEntries(rows);
+        setHasMore(rows.length === PAGE_SIZE);
+      })
+      .catch(() => toast.error("Failed to load entries"))
+      .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    return () => { audioRef.current?.pause(); };
+  }, []);
+
+  async function loadMore() {
+    setLoadingMore(true);
+    try {
+      const rows = await api.entries.list(PAGE_SIZE, entries.length);
+      setEntries((prev) => [...prev, ...rows]);
+      setHasMore(rows.length === PAGE_SIZE);
+    } catch {
+      toast.error("Failed to load more entries");
+    } finally {
+      setLoadingMore(false);
+    }
+  }
+
   async function handleDelete(id: string) {
+    if (playingId === id) {
+      audioRef.current?.pause();
+      audioRef.current = null;
+      setPlayingId(null);
+    }
     try {
       await api.entries.delete(id);
       setEntries((prev) => prev.filter((e) => e.id !== id));
@@ -28,14 +132,22 @@ export function JournalPage() {
 
   function handlePlay(entry: Entry) {
     if (!user) return;
-    const url = api.audio.url(user.id, entry.audioPath);
+
     if (playingId === entry.id) {
+      audioRef.current?.pause();
+      audioRef.current = null;
       setPlayingId(null);
       return;
     }
-    const audio = new Audio(url);
-    audio.onended = () => setPlayingId(null);
+
+    audioRef.current?.pause();
+    const audio = new Audio(api.audio.url(user.id, entry.audioPath));
+    audio.onended = () => {
+      audioRef.current = null;
+      setPlayingId(null);
+    };
     audio.play().catch(() => toast.error("Could not play audio"));
+    audioRef.current = audio;
     setPlayingId(entry.id);
   }
 
@@ -56,35 +168,50 @@ export function JournalPage() {
     );
   }
 
+  const groups: { label: string; items: Entry[] }[] = [];
+  for (const entry of entries) {
+    const label = dateGroup(entry.createdAt);
+    const last = groups[groups.length - 1];
+    if (last && last.label === label) {
+      last.items.push(entry);
+    } else {
+      groups.push({ label, items: [entry] });
+    }
+  }
+
   return (
-    <div className="space-y-3">
-      <h1 className="text-xl font-semibold mb-6">Your Journal</h1>
-      {entries.map((entry) => (
-        <div key={entry.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm text-zinc-400">
-              <span>{formatDate(entry.createdAt)}</span>
-              <span>·</span>
-              <span>{formatDuration(entry.durationSecs)}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => handlePlay(entry)}
-                className="text-zinc-400 hover:text-violet-400 transition-colors"
-              >
-                {playingId === entry.id ? <Pause size={16} /> : <Play size={16} />}
-              </button>
-              <button
-                onClick={() => handleDelete(entry.id)}
-                className="text-zinc-500 hover:text-red-400 transition-colors"
-              >
-                <Trash2 size={16} />
-              </button>
-            </div>
-          </div>
-          <p className="text-zinc-300 text-sm leading-relaxed line-clamp-4">{entry.transcript}</p>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold">Your Journal</h1>
+        <span className="text-xs text-zinc-500">{entries.length} entries</span>
+      </div>
+
+      {groups.map((group) => (
+        <div key={group.label} className="space-y-3">
+          <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider px-1">
+            {group.label}
+          </p>
+          {group.items.map((entry) => (
+            <EntryCard
+              key={entry.id}
+              entry={entry}
+              isPlaying={playingId === entry.id}
+              onPlay={() => handlePlay(entry)}
+              onDelete={() => handleDelete(entry.id)}
+            />
+          ))}
         </div>
       ))}
+
+      {hasMore && (
+        <button
+          onClick={loadMore}
+          disabled={loadingMore}
+          className="w-full py-2.5 text-sm text-zinc-500 hover:text-zinc-300 border border-zinc-800 hover:border-zinc-700 rounded-lg transition-colors disabled:opacity-50"
+        >
+          {loadingMore ? "Loading…" : "Load more"}
+        </button>
+      )}
     </div>
   );
 }

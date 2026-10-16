@@ -3,8 +3,9 @@ dist/
 .env
 .env.local
 
-# audio uploads — user data, never commit
-apps/api/uploads/
+# audio uploads — user data, never commit (keep the directory via .gitkeep)
+apps/api/uploads/*
+!apps/api/uploads/.gitkeep
 
 # drizzle generated migrations (keep in version control if you want)
 # drizzle/
