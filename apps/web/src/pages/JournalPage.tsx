@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Trash2, Play, Pause, ChevronDown, ChevronUp, Mic } from "lucide-react";
+import { Trash2, Play, Pause, ChevronDown, ChevronUp, Mic, X } from "lucide-react";
 import { toast } from "sonner";
 import { api, type Entry } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -89,6 +89,7 @@ export function JournalPage() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
+  const [filter, setFilter] = useState("");
   const [playingId, setPlayingId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -187,8 +188,13 @@ export function JournalPage() {
     );
   }
 
+  const needle = filter.trim().toLowerCase();
+  const filteredEntries = needle
+    ? entries.filter((e) => e.transcript.toLowerCase().includes(needle))
+    : entries;
+
   const groups: { label: string; items: Entry[] }[] = [];
-  for (const entry of entries) {
+  for (const entry of filteredEntries) {
     const label = dateGroup(entry.createdAt);
     const last = groups[groups.length - 1];
     if (last && last.label === label) {
@@ -202,10 +208,35 @@ export function JournalPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Your Journal</h1>
-        {entries.length > 0 && (
-          <span className="text-xs text-zinc-500">{entries.length}{hasMore ? "+" : ""} entries</span>
+        <span className="text-xs text-zinc-500">
+          {needle
+            ? `${filteredEntries.length} of ${entries.length}${hasMore ? "+" : ""}`
+            : entries.length > 0
+              ? `${entries.length}${hasMore ? "+" : ""} entries`
+              : null}
+        </span>
+      </div>
+
+      <div className="relative">
+        <input
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          placeholder="Filter entries…"
+          className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 pr-8 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-violet-500 focus:border-violet-600 transition-colors"
+        />
+        {filter && (
+          <button
+            onClick={() => setFilter("")}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+          >
+            <X size={14} />
+          </button>
         )}
       </div>
+
+      {needle && filteredEntries.length === 0 && (
+        <p className="text-zinc-500 text-sm text-center py-8">No entries match "{filter}".</p>
+      )}
 
       {groups.map((group) => (
         <div key={group.label} className="space-y-3">
