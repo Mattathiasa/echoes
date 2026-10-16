@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { eq, and, desc } from "drizzle-orm";
-import { mkdir } from "fs/promises";
+import { mkdir, unlink } from "fs/promises";
 import { join } from "path";
 import { randomUUID } from "crypto";
 import { db } from "../db/client.js";
@@ -15,12 +15,41 @@ const paginationSchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 });
 
+async function saveUpload(
+  stream: NodeJS.ReadableStream,
+  destPath: string,
+): Promise<void> {
+  const { pipeline } = await import("stream/promises");
+  const { createWriteStream } = await import("fs");
+  await pipeline(stream, createWriteStream(destPath));
+}
+
 export async function entriesRoutes(app: FastifyInstance) {
+  // Transcribe audio without saving — returns transcript for preview
+  app.post("/entries/transcribe", { preHandler: [app.authenticate] }, async (req, reply) => {
+    const data = await req.file();
+    if (!data) return reply.code(400).send({ error: "audio file required" });
+
+    const tmpDir = join(env.UPLOADS_DIR, "_tmp");
+    await mkdir(tmpDir, { recursive: true });
+    const tmpPath = join(tmpDir, `${randomUUID()}.webm`);
+    await saveUpload(data.file, tmpPath);
+
+    try {
+      const transcript = await transcribeAudio(tmpPath);
+      return { transcript };
+    } finally {
+      await unlink(tmpPath).catch(() => {});
+    }
+  });
+
   app.post("/entries", { preHandler: [app.authenticate] }, async (req, reply) => {
     const data = await req.file();
     if (!data) return reply.code(400).send({ error: "audio file required" });
 
     const durationSecs = parseInt(req.headers["x-duration-secs"] as string ?? "0", 10) || 0;
+    // Optional pre-computed transcript from the preview step (skips Whisper call)
+    const providedTranscript = req.headers["x-transcript"] as string | undefined;
 
     const userDir = join(env.UPLOADS_DIR, req.userId);
     await mkdir(userDir, { recursive: true });
@@ -28,11 +57,9 @@ export async function entriesRoutes(app: FastifyInstance) {
     const filename = `${randomUUID()}.webm`;
     const audioPath = join(userDir, filename);
 
-    const { pipeline } = await import("stream/promises");
-    const { createWriteStream } = await import("fs");
-    await pipeline(data.file, createWriteStream(audioPath));
+    await saveUpload(data.file, audioPath);
 
-    const transcript = await transcribeAudio(audioPath);
+    const transcript = providedTranscript?.trim() || await transcribeAudio(audioPath);
     const embedding = await embed(transcript);
 
     const [entry] = await db

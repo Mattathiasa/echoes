@@ -63,12 +63,23 @@ export const api = {
       }),
   },
   entries: {
-    create: (audioBlob: Blob, durationSecs: number) => {
+    transcribe: (audioBlob: Blob) => {
+      const form = new FormData();
+      form.append("file", audioBlob, "audio.webm");
+      return request<{ transcript: string }>("/entries/transcribe", {
+        method: "POST",
+        body: form,
+      });
+    },
+    create: (audioBlob: Blob, durationSecs: number, transcript?: string) => {
       const form = new FormData();
       form.append("file", audioBlob, "audio.webm");
       return request<Entry>("/entries", {
         method: "POST",
-        headers: { "x-duration-secs": String(durationSecs) },
+        headers: {
+          "x-duration-secs": String(durationSecs),
+          ...(transcript ? { "x-transcript": transcript } : {}),
+        },
         body: form,
       });
     },
@@ -92,6 +103,7 @@ export const api = {
   },
   digest: {
     get: () => request<Digest>("/digest"),
+    list: () => request<Digest[]>("/digests"),
     generate: () => request<Digest>("/digest/generate", { method: "POST" }),
   },
 };

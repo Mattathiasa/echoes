@@ -12,6 +12,13 @@ function weekStart(date: Date): string {
 }
 
 export async function digestRoutes(app: FastifyInstance) {
+  app.get("/digests", { preHandler: [app.authenticate] }, async (req) => {
+    return db.query.weeklyDigests.findMany({
+      where: eq(weeklyDigests.userId, req.userId),
+      orderBy: [desc(weeklyDigests.createdAt)],
+    });
+  });
+
   app.get("/digest", { preHandler: [app.authenticate] }, async (req, reply) => {
     const digest = await db.query.weeklyDigests.findFirst({
       where: eq(weeklyDigests.userId, req.userId),

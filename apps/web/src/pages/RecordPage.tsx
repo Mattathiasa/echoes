@@ -1,46 +1,133 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Mic, Square, Loader2 } from "lucide-react";
+import { Mic, Square, Loader2, Check, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { useRecorder } from "../hooks/useRecorder";
 import { api } from "../lib/api";
-import { cn } from "../lib/utils";
+import { formatDuration, cn } from "../lib/utils";
+
+type Phase = "idle" | "recording" | "transcribing" | "preview" | "saving";
+
+interface PreviewData {
+  transcript: string;
+  blob: Blob;
+  durationSecs: number;
+}
 
 export function RecordPage() {
   const navigate = useNavigate();
-  const { state, error, audioLevels, startRecording, stopRecording, reset } = useRecorder();
+  const { state: recorderState, error, audioLevels, startRecording, stopRecording, reset: resetRecorder } = useRecorder();
+  const [phase, setPhase] = useState<Phase>("idle");
   const [elapsed, setElapsed] = useState(0);
+  const [preview, setPreview] = useState<PreviewData | null>(null);
+  const [editedTranscript, setEditedTranscript] = useState("");
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  function clearTimer() {
+    if (intervalRef.current !== null) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    setElapsed(0);
+  }
 
   async function handleStart() {
     await startRecording();
     const start = Date.now();
-    const iv = setInterval(() => setElapsed(Math.floor((Date.now() - start) / 1000)), 500);
-    (window as unknown as Record<string, unknown>)["_recorderInterval"] = iv;
+    intervalRef.current = setInterval(
+      () => setElapsed(Math.floor((Date.now() - start) / 1000)),
+      500,
+    );
+    setPhase("recording");
   }
 
   async function handleStop() {
-    clearInterval((window as unknown as Record<string, number>)["_recorderInterval"]);
-    setElapsed(0);
+    clearTimer();
     try {
       const { blob, durationSecs } = await stopRecording();
-      await api.entries.create(blob, durationSecs);
+      setPhase("transcribing");
+      const { transcript } = await api.entries.transcribe(blob);
+      setPreview({ transcript, blob, durationSecs });
+      setEditedTranscript(transcript);
+      setPhase("preview");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Transcription failed");
+      resetRecorder();
+      setPhase("idle");
+    }
+  }
+
+  async function handleSave() {
+    if (!preview) return;
+    setPhase("saving");
+    try {
+      await api.entries.create(preview.blob, preview.durationSecs, editedTranscript.trim() || preview.transcript);
       toast.success("Entry saved");
       navigate("/journal");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to save entry");
-      reset();
+      setPhase("preview");
     }
   }
 
-  const isRecording = state === "recording";
-  const isProcessing = state === "processing";
+  function handleDiscard() {
+    setPreview(null);
+    setEditedTranscript("");
+    resetRecorder();
+    setPhase("idle");
+  }
+
+  if (phase === "preview" && preview) {
+    return (
+      <div className="space-y-5">
+        <div>
+          <h1 className="text-xl font-semibold">Review your entry</h1>
+          <p className="text-zinc-500 text-sm mt-1">
+            Edit the transcript if Whisper got anything wrong, then save.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 text-xs text-zinc-500">
+          <span>{formatDuration(preview.durationSecs)}</span>
+        </div>
+
+        <textarea
+          value={editedTranscript}
+          onChange={(e) => setEditedTranscript(e.target.value)}
+          rows={10}
+          className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-sm text-zinc-200 leading-relaxed focus:outline-none focus:ring-1 focus:ring-violet-500 resize-none"
+        />
+
+        <div className="flex gap-3">
+          <button
+            onClick={handleSave}
+            disabled={!editedTranscript.trim()}
+            className="flex-1 flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 py-2.5 rounded-lg text-sm font-medium transition-colors"
+          >
+            <Check size={15} />
+            Save entry
+          </button>
+          <button
+            onClick={handleDiscard}
+            className="flex items-center justify-center gap-2 border border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-zinc-200 px-4 py-2.5 rounded-lg text-sm transition-colors"
+          >
+            <RotateCcw size={15} />
+            Discard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const isRecording = phase === "recording";
+  const isBusy = phase === "transcribing" || phase === "saving" || recorderState === "processing";
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] gap-10">
-      <div>
-        <h1 className="text-2xl font-semibold text-center">What's on your mind?</h1>
-        <p className="text-zinc-500 text-sm text-center mt-1">
-          Tap the mic to start recording your thoughts.
+      <div className="text-center">
+        <h1 className="text-2xl font-semibold">What's on your mind?</h1>
+        <p className="text-zinc-500 text-sm mt-1">
+          {isRecording ? "Tap the square to stop." : "Tap the mic to start recording."}
         </p>
       </div>
 
@@ -57,7 +144,7 @@ export function RecordPage() {
       )}
 
       {isRecording && (
-        <p className="text-zinc-400 tabular-nums">
+        <p className="text-zinc-400 tabular-nums text-sm">
           {String(Math.floor(elapsed / 60)).padStart(2, "0")}:
           {String(elapsed % 60).padStart(2, "0")}
         </p>
@@ -65,16 +152,16 @@ export function RecordPage() {
 
       <button
         onClick={isRecording ? handleStop : handleStart}
-        disabled={isProcessing}
+        disabled={isBusy}
         className={cn(
-          "w-24 h-24 rounded-full flex items-center justify-center transition-all",
+          "w-24 h-24 rounded-full flex items-center justify-center transition-all shadow-lg",
           isRecording
             ? "bg-red-500 hover:bg-red-600 scale-110"
             : "bg-violet-600 hover:bg-violet-500",
-          isProcessing && "opacity-50 cursor-not-allowed",
+          isBusy && "opacity-50 cursor-not-allowed scale-100",
         )}
       >
-        {isProcessing ? (
+        {isBusy ? (
           <Loader2 size={32} className="animate-spin text-white" />
         ) : isRecording ? (
           <Square size={28} className="text-white" fill="white" />
@@ -83,8 +170,11 @@ export function RecordPage() {
         )}
       </button>
 
-      {isProcessing && (
+      {phase === "transcribing" && (
         <p className="text-zinc-500 text-sm animate-pulse">Transcribing your entry…</p>
+      )}
+      {phase === "saving" && (
+        <p className="text-zinc-500 text-sm animate-pulse">Saving…</p>
       )}
 
       {error && <p className="text-red-400 text-sm text-center max-w-xs">{error}</p>}
