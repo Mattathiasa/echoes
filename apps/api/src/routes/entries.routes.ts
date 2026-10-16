@@ -100,6 +100,31 @@ export async function entriesRoutes(app: FastifyInstance) {
     return entry;
   });
 
+  app.patch("/entries/:id", { preHandler: [app.authenticate] }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const { transcript } = z.object({ transcript: z.string().min(1) }).parse(req.body);
+
+    const existing = await db.query.entries.findFirst({
+      where: and(eq(entries.id, id), eq(entries.userId, req.userId)),
+    });
+    if (!existing) return reply.code(404).send({ error: "not_found" });
+
+    const embedding = await embed(transcript);
+
+    const [updated] = await db
+      .update(entries)
+      .set({ transcript })
+      .where(and(eq(entries.id, id), eq(entries.userId, req.userId)))
+      .returning();
+
+    await db
+      .update(entryEmbeddings)
+      .set({ embedding })
+      .where(eq(entryEmbeddings.entryId, id));
+
+    return updated;
+  });
+
   app.delete("/entries/:id", { preHandler: [app.authenticate] }, async (req, reply) => {
     const { id } = req.params as { id: string };
 

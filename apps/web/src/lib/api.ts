@@ -103,6 +103,11 @@ export const api = {
     list: (limit = 20, offset = 0) =>
       request<Entry[]>(`/entries?limit=${limit}&offset=${offset}`),
     get: (id: string) => request<Entry>(`/entries/${id}`),
+    update: (id: string, transcript: string) =>
+      request<Entry>(`/entries/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ transcript }),
+      }),
     delete: (id: string) => request<void>(`/entries/${id}`, { method: "DELETE" }),
   },
   audio: {

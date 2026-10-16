@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Play, Pause, Trash2, Loader2 } from "lucide-react";
+import { ArrowLeft, Play, Pause, Trash2, Loader2, Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { api, type Entry } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -15,32 +15,18 @@ function AudioPlayer({ src }: { src: string }) {
 
   useEffect(() => {
     const audio = new Audio(src);
-    audio.onloadedmetadata = () => {
-      setDuration(audio.duration);
-      setReady(true);
-    };
+    audio.onloadedmetadata = () => { setDuration(audio.duration); setReady(true); };
     audio.ontimeupdate = () => setCurrentTime(audio.currentTime);
-    audio.onended = () => {
-      setPlaying(false);
-      setCurrentTime(0);
-    };
+    audio.onended = () => { setPlaying(false); setCurrentTime(0); };
     audioRef.current = audio;
-    return () => {
-      audio.pause();
-      audioRef.current = null;
-    };
+    return () => { audio.pause(); audioRef.current = null; };
   }, [src]);
 
   function handlePlayPause() {
     const audio = audioRef.current;
     if (!audio) return;
-    if (playing) {
-      audio.pause();
-      setPlaying(false);
-    } else {
-      audio.play().catch(() => toast.error("Could not play audio"));
-      setPlaying(true);
-    }
+    if (playing) { audio.pause(); setPlaying(false); }
+    else { audio.play().catch(() => toast.error("Could not play audio")); setPlaying(true); }
   }
 
   function handleSeek(e: React.ChangeEvent<HTMLInputElement>) {
@@ -52,7 +38,7 @@ function AudioPlayer({ src }: { src: string }) {
   const pct = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
+    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
       <div className="flex items-center gap-3">
         <button
           onClick={handlePlayPause}
@@ -61,7 +47,6 @@ function AudioPlayer({ src }: { src: string }) {
         >
           {playing ? <Pause size={16} className="text-white" /> : <Play size={16} className="text-white ml-0.5" />}
         </button>
-
         <div className="flex-1 space-y-1">
           <input
             type="range"
@@ -72,9 +57,7 @@ function AudioPlayer({ src }: { src: string }) {
             onChange={handleSeek}
             disabled={!ready}
             className="w-full h-1.5 appearance-none rounded-full bg-zinc-700 disabled:opacity-40"
-            style={{
-              background: `linear-gradient(to right, #7c3aed ${pct}%, #3f3f46 ${pct}%)`,
-            }}
+            style={{ background: `linear-gradient(to right, #7c3aed ${pct}%, #3f3f46 ${pct}%)` }}
           />
           <div className="flex justify-between text-xs text-zinc-500 tabular-nums">
             <span>{formatDuration(Math.floor(currentTime))}</span>
@@ -93,6 +76,9 @@ export function EntryDetailPage() {
   const [entry, setEntry] = useState<Entry | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!id) { navigate("/journal"); return; }
@@ -102,6 +88,33 @@ export function EntryDetailPage() {
       .catch(() => { toast.error("Entry not found"); navigate("/journal"); })
       .finally(() => setLoading(false));
   }, [id]);
+
+  function startEdit() {
+    if (!entry) return;
+    setEditText(entry.transcript);
+    setEditing(true);
+  }
+
+  function cancelEdit() {
+    setEditing(false);
+    setEditText("");
+  }
+
+  async function handleSave() {
+    if (!entry || !editText.trim()) return;
+    setSaving(true);
+    try {
+      const updated = await api.entries.update(entry.id, editText.trim());
+      setEntry(updated);
+      setEditing(false);
+      setEditText("");
+      toast.success("Transcript updated");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function handleDelete() {
     if (!entry) return;
@@ -126,7 +139,7 @@ export function EntryDetailPage() {
 
   if (!entry || !user) return null;
 
-  const audioSrc = api.audio.url(user.id, entry.audioPath);
+  const wordCount = entry.transcript.trim().split(/\s+/).filter(Boolean).length;
 
   return (
     <div className="space-y-6">
@@ -137,12 +150,12 @@ export function EntryDetailPage() {
         >
           <ArrowLeft size={20} />
         </button>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <p className="text-sm text-zinc-400">{formatDate(entry.createdAt)}</p>
         </div>
         <button
           onClick={handleDelete}
-          disabled={deleting}
+          disabled={deleting || editing}
           className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-red-400 disabled:opacity-50 transition-colors"
         >
           {deleting ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
@@ -150,15 +163,58 @@ export function EntryDetailPage() {
         </button>
       </div>
 
-      <AudioPlayer src={audioSrc} />
+      <AudioPlayer src={api.audio.url(user.id, entry.audioPath)} />
 
-      <div className="space-y-2">
-        <div className="flex items-center gap-2 text-xs text-zinc-500">
-          <span>{formatDuration(entry.durationSecs)}</span>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3 text-xs text-zinc-500">
+            <span>{formatDuration(entry.durationSecs)}</span>
+            <span>·</span>
+            <span>{wordCount} words</span>
+          </div>
+          {!editing && (
+            <button
+              onClick={startEdit}
+              className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-violet-400 transition-colors"
+            >
+              <Pencil size={13} />
+              Edit
+            </button>
+          )}
         </div>
-        <p className="text-zinc-200 text-sm leading-relaxed whitespace-pre-wrap">
-          {entry.transcript}
-        </p>
+
+        {editing ? (
+          <div className="space-y-3">
+            <textarea
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              rows={12}
+              className="w-full bg-zinc-900 border border-violet-600 rounded-xl px-4 py-3 text-sm text-zinc-200 leading-relaxed focus:outline-none focus:ring-1 focus:ring-violet-500 resize-none"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={handleSave}
+                disabled={saving || !editText.trim()}
+                className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+              >
+                {saving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                Save
+              </button>
+              <button
+                onClick={cancelEdit}
+                disabled={saving}
+                className="flex items-center gap-1.5 border border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-zinc-200 px-3 py-1.5 rounded-lg text-sm transition-colors"
+              >
+                <X size={13} />
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-zinc-200 text-sm leading-relaxed whitespace-pre-wrap">
+            {entry.transcript}
+          </p>
+        )}
       </div>
     </div>
   );
