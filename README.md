@@ -133,6 +133,37 @@ echoes/
 
 ---
 
+## Deployment (free tier)
+
+### Frontend → Vercel
+
+```bash
+# Install Vercel CLI
+npm i -g vercel
+
+cd apps/web
+vercel --prod
+# Set env: VITE_API_URL=https://your-render-app.onrender.com
+```
+
+### Backend → Render
+
+1. New **Web Service** → connect GitHub repo
+2. Build command: `npm install && npm run build`
+3. Start command: `node dist/index.js`
+4. Root directory: `apps/api`
+5. Add env vars: `DATABASE_URL`, `JWT_SECRET`, `GROQ_API_KEY`, `UPLOADS_DIR=/tmp/uploads`
+
+> **Note:** Render free tier has an ephemeral filesystem — audio files won't survive a restart. Entries and transcripts are safe in the DB; only audio playback will break after a restart. For persistent audio storage, swap `UPLOADS_DIR` for an S3-compatible bucket (Cloudflare R2 has a generous free tier).
+
+### Database → Supabase
+
+1. New project → **Database** tab → copy the connection string
+2. Set `DATABASE_URL` in your Render env vars
+3. Run migrations: `npm run db:push` (or `db:generate && db:migrate`)
+
+---
+
 ## Keyboard shortcuts
 
 | Key | Action |
