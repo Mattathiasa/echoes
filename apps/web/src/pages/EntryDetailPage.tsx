@@ -234,7 +234,7 @@ export function EntryDetailPage() {
           <ArrowLeft size={20} />
         </button>
         <div className="flex-1 min-w-0">
-          <p className="text-sm text-zinc-400">{formatDate(entry.createdAt)}</p>
+          <p className="text-sm text-zinc-400">{formatDate(entry.createdAt, true)}</p>
         </div>
         {confirmDelete ? (
           <div className="flex items-center gap-3">

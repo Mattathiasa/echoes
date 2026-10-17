@@ -44,7 +44,7 @@ function EntryCard({
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-xs text-zinc-500">
-          <span>{formatDate(entry.createdAt)}</span>
+          <span>{formatDate(entry.createdAt, true)}</span>
           <span>·</span>
           <span>{formatDuration(entry.durationSecs)}</span>
         </div>
