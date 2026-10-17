@@ -129,7 +129,7 @@ export async function entriesRoutes(app: FastifyInstance) {
     });
     if (!existing) return reply.code(404).send({ error: "not_found" });
 
-    const patch: Partial<typeof existing> = {};
+    const patch: { transcript?: string; tags?: string[] } = {};
     if (body.tags !== undefined) patch.tags = body.tags;
 
     if (body.transcript !== undefined) {

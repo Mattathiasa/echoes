@@ -19,10 +19,12 @@ export async function searchRoutes(app: FastifyInstance) {
     const rows = await db
       .select({
         id: entries.id,
+        userId: entries.userId,
         transcript: entries.transcript,
         durationSecs: entries.durationSecs,
         createdAt: entries.createdAt,
         audioPath: entries.audioPath,
+        tags: entries.tags,
         score: sql<number>`1 - (${cosineDistance(entryEmbeddings.embedding, queryEmbedding)})`.as("score"),
       })
       .from(entryEmbeddings)
