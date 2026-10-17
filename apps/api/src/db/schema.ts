@@ -27,6 +27,7 @@ export const entries = pgTable("entries", {
   audioPath: text("audio_path").notNull(),
   transcript: text("transcript").notNull(),
   durationSecs: integer("duration_secs").notNull().default(0),
+  tags: text("tags").array().notNull().default(sql`ARRAY[]::text[]`),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

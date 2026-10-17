@@ -39,6 +39,7 @@ export interface Entry {
   audioPath: string;
   transcript: string;
   durationSecs: number;
+  tags: string[];
   createdAt: string;
 }
 
@@ -114,10 +115,10 @@ export const api = {
       request<Entry[]>(`/entries?limit=${limit}&offset=${offset}`),
     get: (id: string) => request<Entry>(`/entries/${id}`),
     random: () => request<Entry>("/entries/random"),
-    update: (id: string, transcript: string) =>
+    update: (id: string, patch: { transcript?: string; tags?: string[] }) =>
       request<Entry>(`/entries/${id}`, {
         method: "PATCH",
-        body: JSON.stringify({ transcript }),
+        body: JSON.stringify(patch),
       }),
     delete: (id: string) => request<void>(`/entries/${id}`, { method: "DELETE" }),
   },

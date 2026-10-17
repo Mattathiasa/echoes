@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Play, Pause, Trash2, Loader2, Pencil, Check, X, Copy, Share2 } from "lucide-react";
+import { ArrowLeft, Play, Pause, Trash2, Loader2, Pencil, Check, X, Copy, Share2, Tag } from "lucide-react";
 import { toast } from "sonner";
 import { api, type Entry, type SearchResult } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -101,6 +101,9 @@ export function EntryDetailPage() {
   const [related, setRelated] = useState<SearchResult[]>([]);
   const [editText, setEditText] = useState("");
   const [saving, setSaving] = useState(false);
+  const [editingTags, setEditingTags] = useState(false);
+  const [tagDraft, setTagDraft] = useState("");
+  const [pendingTags, setPendingTags] = useState<string[]>([]);
 
   useEffect(() => {
     if (!id) { navigate("/journal"); return; }
@@ -133,13 +136,42 @@ export function EntryDetailPage() {
     if (!entry || !editText.trim()) return;
     setSaving(true);
     try {
-      const updated = await api.entries.update(entry.id, editText.trim());
+      const updated = await api.entries.update(entry.id, { transcript: editText.trim() });
       setEntry(updated);
       setEditing(false);
       setEditText("");
       toast.success("Transcript updated");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function openTagEditor() {
+    if (!entry) return;
+    setPendingTags(entry.tags ?? []);
+    setTagDraft("");
+    setEditingTags(true);
+  }
+
+  function addTag() {
+    const t = tagDraft.trim().toLowerCase().replace(/\s+/g, "-");
+    if (!t || pendingTags.includes(t) || pendingTags.length >= 5) return;
+    setPendingTags((prev) => [...prev, t]);
+    setTagDraft("");
+  }
+
+  async function saveTags() {
+    if (!entry) return;
+    setSaving(true);
+    try {
+      const updated = await api.entries.update(entry.id, { tags: pendingTags });
+      setEntry(updated);
+      setEditingTags(false);
+      toast.success("Tags saved");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save tags");
     } finally {
       setSaving(false);
     }
@@ -311,6 +343,87 @@ export function EntryDetailPage() {
           <p className="text-zinc-200 text-sm leading-relaxed whitespace-pre-wrap">
             {entry.transcript}
           </p>
+        )}
+      </div>
+
+      {/* Tags section */}
+      <div className="space-y-2">
+        {editingTags ? (
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              {pendingTags.map((t) => (
+                <span
+                  key={t}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-violet-500/15 text-violet-300 border border-violet-500/25"
+                >
+                  #{t}
+                  <button
+                    onClick={() => setPendingTags((prev) => prev.filter((x) => x !== t))}
+                    className="text-violet-400 hover:text-violet-200"
+                  >
+                    <X size={10} />
+                  </button>
+                </span>
+              ))}
+            </div>
+            {pendingTags.length < 5 && (
+              <div className="flex gap-2">
+                <input
+                  value={tagDraft}
+                  onChange={(e) => setTagDraft(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }}
+                  placeholder="Add tag…"
+                  maxLength={30}
+                  className="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-violet-500"
+                />
+                <button
+                  onClick={addTag}
+                  disabled={!tagDraft.trim()}
+                  className="px-3 py-1.5 rounded-lg text-sm bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 text-zinc-300 transition-colors"
+                >
+                  Add
+                </button>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <button
+                onClick={saveTags}
+                disabled={saving}
+                className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+              >
+                {saving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                Save tags
+              </button>
+              <button
+                onClick={() => setEditingTags(false)}
+                disabled={saving}
+                className="flex items-center gap-1.5 border border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-zinc-200 px-3 py-1.5 rounded-lg text-sm transition-colors"
+              >
+                <X size={13} />
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 flex-wrap">
+            {(entry.tags ?? []).map((t) => (
+              <span
+                key={t}
+                className="px-2.5 py-1 rounded-full text-xs bg-violet-500/10 text-violet-400 border border-violet-500/20"
+              >
+                #{t}
+              </span>
+            ))}
+            {!editing && (
+              <button
+                onClick={openTagEditor}
+                className="flex items-center gap-1 text-xs text-zinc-600 hover:text-zinc-400 transition-colors"
+              >
+                <Tag size={12} />
+                {(entry.tags ?? []).length === 0 ? "Add tags" : "Edit"}
+              </button>
+            )}
+          </div>
         )}
       </div>
 

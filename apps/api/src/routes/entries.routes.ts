@@ -114,25 +114,38 @@ export async function entriesRoutes(app: FastifyInstance) {
 
   app.patch("/entries/:id", { preHandler: [app.authenticate] }, async (req, reply) => {
     const { id } = req.params as { id: string };
-    const { transcript } = z.object({ transcript: z.string().min(1) }).parse(req.body);
+    const body = z
+      .object({
+        transcript: z.string().min(1).optional(),
+        tags: z.array(z.string().max(30)).max(5).optional(),
+      })
+      .refine((b) => b.transcript !== undefined || b.tags !== undefined, {
+        message: "at least one field required",
+      })
+      .parse(req.body);
 
     const existing = await db.query.entries.findFirst({
       where: and(eq(entries.id, id), eq(entries.userId, req.userId)),
     });
     if (!existing) return reply.code(404).send({ error: "not_found" });
 
-    const embedding = await embed(transcript);
+    const patch: Partial<typeof existing> = {};
+    if (body.tags !== undefined) patch.tags = body.tags;
+
+    if (body.transcript !== undefined) {
+      patch.transcript = body.transcript;
+      const embedding = await embed(body.transcript);
+      await db
+        .update(entryEmbeddings)
+        .set({ embedding })
+        .where(eq(entryEmbeddings.entryId, id));
+    }
 
     const [updated] = await db
       .update(entries)
-      .set({ transcript })
+      .set(patch)
       .where(and(eq(entries.id, id), eq(entries.userId, req.userId)))
       .returning();
-
-    await db
-      .update(entryEmbeddings)
-      .set({ embedding })
-      .where(eq(entryEmbeddings.entryId, id));
 
     return updated;
   });

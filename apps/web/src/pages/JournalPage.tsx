@@ -24,11 +24,13 @@ function EntryCard({
   isPlaying,
   onPlay,
   onDelete,
+  onTagClick,
 }: {
   entry: Entry;
   isPlaying: boolean;
   onPlay: () => void;
   onDelete: () => void;
+  onTagClick: (tag: string) => void;
 }) {
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
@@ -63,6 +65,20 @@ function EntryCard({
           </button>
         </div>
       </div>
+
+      {entry.tags && entry.tags.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {entry.tags.slice(0, 4).map((t) => (
+            <span
+              key={t}
+              onClick={(e) => { e.stopPropagation(); onTagClick(t); }}
+              className="px-2 py-0.5 rounded-full text-xs bg-violet-500/10 text-violet-400 border border-violet-500/20 cursor-pointer hover:bg-violet-500/20 transition-colors"
+            >
+              #{t}
+            </span>
+          ))}
+        </div>
+      )}
 
       {confirmDelete ? (
         <div
@@ -250,7 +266,16 @@ export function JournalPage() {
 
   const needle = filter.trim().toLowerCase();
   const filteredEntries = needle
-    ? entries.filter((e) => e.transcript.toLowerCase().includes(needle))
+    ? entries.filter((e) => {
+        if (needle.startsWith("#")) {
+          const tag = needle.slice(1);
+          return (e.tags ?? []).some((t) => t.includes(tag));
+        }
+        return (
+          e.transcript.toLowerCase().includes(needle) ||
+          (e.tags ?? []).some((t) => t.includes(needle))
+        );
+      })
     : entries;
 
   const groups: { label: string; items: Entry[] }[] = [];
@@ -326,6 +351,7 @@ export function JournalPage() {
               isPlaying={playingId === entry.id}
               onPlay={() => handlePlay(entry)}
               onDelete={() => handleDelete(entry.id)}
+              onTagClick={(tag) => setFilter(`#${tag}`)}
             />
           ))}
         </div>
