@@ -29,7 +29,7 @@ export function Layout({ children }: { children: ReactNode }) {
           <NavLink
             to="/settings"
             className={({ isActive }) =>
-              cn("hover:text-zinc-100 transition-colors", isActive && "text-violet-400")
+              cn("hover:text-zinc-100 transition-colors", isActive && "text-emerald-400")
             }
           >
             <Settings size={16} />
@@ -51,7 +51,7 @@ export function Layout({ children }: { children: ReactNode }) {
             className={({ isActive }) =>
               cn(
                 "flex-1 flex flex-col items-center gap-1 py-3 text-xs transition-colors",
-                isActive ? "text-violet-400" : "text-zinc-500 hover:text-zinc-300",
+                isActive ? "text-emerald-400 font-medium" : "text-zinc-500 hover:text-zinc-300",
               )
             }
           >

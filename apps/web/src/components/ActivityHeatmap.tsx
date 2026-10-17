@@ -6,11 +6,11 @@ interface DayCount {
 }
 
 function cellBg(date: string, todayStr: string, count: number): string {
-  if (date > todayStr) return "bg-zinc-800/20";
-  if (count === 0) return "bg-zinc-800/60";
-  if (count === 1) return "bg-violet-900";
-  if (count <= 3) return "bg-violet-700";
-  return "bg-violet-500";
+  if (date > todayStr) return "bg-slate-800/20";
+  if (count === 0) return "bg-slate-800/60";
+  if (count === 1) return "bg-emerald-950 border border-emerald-800/50";
+  if (count <= 3) return "bg-emerald-700";
+  return "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.4)]";
 }
 
 export function ActivityHeatmap({ data }: { data: DayCount[] }) {
@@ -55,7 +55,7 @@ export function ActivityHeatmap({ data }: { data: DayCount[] }) {
       </div>
       <div className="flex items-center gap-1.5 text-xs text-zinc-600">
         <span>Less</span>
-        {(["bg-zinc-800/60", "bg-violet-900", "bg-violet-700", "bg-violet-500"] as const).map((c) => (
+        {(["bg-slate-800/60", "bg-emerald-950", "bg-emerald-700", "bg-emerald-400"] as const).map((c) => (
           <div key={c} className={`w-2.5 h-2.5 rounded-sm ${c}`} />
         ))}
         <span>More</span>

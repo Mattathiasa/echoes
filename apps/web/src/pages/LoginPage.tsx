@@ -41,31 +41,31 @@ export function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-2.5 text-sm text-zinc-100 focus:outline-none focus:ring-1 focus:ring-violet-500"
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm text-zinc-400">Password</label>
+            <label className="text-sm text-slate-400">Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-2.5 text-sm text-zinc-100 focus:outline-none focus:ring-1 focus:ring-violet-500"
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             />
           </div>
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-violet-600 hover:bg-violet-500 disabled:opacity-50 py-2.5 rounded-lg text-sm font-medium transition-colors"
+            className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 disabled:opacity-50 py-2.5 rounded-lg text-sm font-semibold text-slate-950 transition-all shadow-md shadow-emerald-500/20 hover:shadow-emerald-500/30"
           >
             {loading ? "Signing in…" : "Sign in"}
           </button>
         </form>
 
-        <p className="text-center text-sm text-zinc-500">
+        <p className="text-center text-sm text-slate-500">
           No account?{" "}
-          <Link to="/register" className="text-violet-400 hover:text-violet-300">
+          <Link to="/register" className="text-emerald-400 hover:text-emerald-300 font-medium">
             Create one
           </Link>
         </p>
