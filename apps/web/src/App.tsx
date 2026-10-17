@@ -5,6 +5,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { Layout } from "./components/Layout";
 import { LandingPage } from "./pages/LandingPage";
+import { ShortcutsModal } from "./components/ShortcutsModal";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { RecordPage } from "./pages/RecordPage";
@@ -26,6 +27,7 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Toaster theme="dark" position="top-center" richColors />
+        <ShortcutsModal />
         <Routes>
           <Route path="/" element={<HomeRoute />} />
           <Route path="/login" element={<LoginPage />} />
