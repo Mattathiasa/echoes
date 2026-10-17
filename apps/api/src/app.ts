@@ -19,7 +19,10 @@ import { env } from "./env.js";
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({ logger: true });
 
-  await app.register(cors, { origin: true });
+  await app.register(cors, {
+    origin: env.CORS_ORIGIN ?? true,
+    credentials: true,
+  });
   // Global rate limit: 300 req/min per IP. Auth routes get a tighter per-route limit below.
   await app.register(rateLimit, { max: 300, timeWindow: "1 minute", keyGenerator: (req) => req.ip });
   await app.register(multipart, { limits: { fileSize: 50 * 1024 * 1024 } });
