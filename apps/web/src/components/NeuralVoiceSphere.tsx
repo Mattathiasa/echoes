@@ -18,23 +18,31 @@ export function NeuralVoiceSphere({ isPlaying = false, className = "" }: NeuralV
     const container = mountRef.current;
     if (!container) return;
 
+    // Detect mobile viewport
+    const isMobile = window.innerWidth < 768;
+    const isSmallMobile = window.innerWidth < 480;
+
     // Dimensions
-    const width = container.clientWidth || 500;
-    const height = container.clientHeight || 500;
+    const width = container.clientWidth || 360;
+    const height = container.clientHeight || 360;
 
     // Scene, Camera, Renderer
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 1000);
-    camera.position.z = 240;
+    camera.position.z = isSmallMobile ? 290 : isMobile ? 260 : 230;
 
-    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: "high-performance" });
+    const renderer = new THREE.WebGLRenderer({
+      alpha: true,
+      antialias: !isMobile, // Disable MSAA on mobile for 60fps thermal efficiency
+      powerPreference: "high-performance",
+    });
     renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
     container.appendChild(renderer.domElement);
 
     // ── Create Particle Sphere ──
-    const particleCount = 2800;
-    const baseRadius = 85;
+    const particleCount = isSmallMobile ? 1400 : isMobile ? 1800 : 2800;
+    const baseRadius = isSmallMobile ? 70 : isMobile ? 78 : 85;
 
     const positions = new Float32Array(particleCount * 3);
     const originalPositions = new Float32Array(particleCount * 3);
@@ -88,7 +96,7 @@ export function NeuralVoiceSphere({ isPlaying = false, className = "" }: NeuralV
     geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
     geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
 
-    // Particle Texture creation via 2D Canvas (soft luminous circle)
+    // Particle Texture creation via 2D Canvas
     const canvas = document.createElement("canvas");
     canvas.width = 32;
     canvas.height = 32;
@@ -96,7 +104,7 @@ export function NeuralVoiceSphere({ isPlaying = false, className = "" }: NeuralV
     if (ctx) {
       const gradient = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
       gradient.addColorStop(0, "rgba(255,255,255,1)");
-      gradient.addColorStop(0.3, "rgba(52,211,153,0.8)");
+      gradient.addColorStop(0.3, "rgba(52,211,153,0.85)");
       gradient.addColorStop(0.7, "rgba(6,182,212,0.3)");
       gradient.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = gradient;
@@ -105,11 +113,11 @@ export function NeuralVoiceSphere({ isPlaying = false, className = "" }: NeuralV
     const texture = new THREE.CanvasTexture(canvas);
 
     const material = new THREE.PointsMaterial({
-      size: 3.2,
+      size: isMobile ? 3.8 : 3.2,
       map: texture,
       vertexColors: true,
       transparent: true,
-      opacity: 0.85,
+      opacity: 0.88,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
     });
@@ -118,7 +126,7 @@ export function NeuralVoiceSphere({ isPlaying = false, className = "" }: NeuralV
     scene.add(pointCloud);
 
     // ── Neural Orbit Rings ──
-    const ringGeometry1 = new THREE.RingGeometry(baseRadius * 1.25, baseRadius * 1.27, 64);
+    const ringGeometry1 = new THREE.RingGeometry(baseRadius * 1.25, baseRadius * 1.27, 48);
     const ringMaterial1 = new THREE.MeshBasicMaterial({
       color: 0x10b981,
       side: THREE.DoubleSide,
@@ -130,7 +138,7 @@ export function NeuralVoiceSphere({ isPlaying = false, className = "" }: NeuralV
     ring1.rotation.y = Math.PI / 6;
     scene.add(ring1);
 
-    const ringGeometry2 = new THREE.RingGeometry(baseRadius * 1.45, baseRadius * 1.47, 64);
+    const ringGeometry2 = new THREE.RingGeometry(baseRadius * 1.45, baseRadius * 1.47, 48);
     const ringMaterial2 = new THREE.MeshBasicMaterial({
       color: 0x06b6d4,
       side: THREE.DoubleSide,
@@ -142,21 +150,32 @@ export function NeuralVoiceSphere({ isPlaying = false, className = "" }: NeuralV
     ring2.rotation.z = Math.PI / 5;
     scene.add(ring2);
 
-    // ── Mouse / Touch Tracking ──
+    // ── Mouse & Touch Tracking (Fully Mobile Responsive) ──
     let mouseX = 0;
     let mouseY = 0;
     let targetX = 0;
     let targetY = 0;
 
-    const onPointerMove = (e: MouseEvent) => {
+    const onPointerMove = (clientX: number, clientY: number) => {
       const rect = container.getBoundingClientRect();
-      const x = (e.clientX - rect.left) / rect.width - 0.5;
-      const y = (e.clientY - rect.top) / rect.height - 0.5;
-      targetX = x * 1.2;
-      targetY = y * 1.2;
+      const x = (clientX - rect.left) / rect.width - 0.5;
+      const y = (clientY - rect.top) / rect.height - 0.5;
+      targetX = x * 1.4;
+      targetY = y * 1.4;
     };
 
-    window.addEventListener("mousemove", onPointerMove);
+    const handleMouseMove = (e: MouseEvent) => {
+      onPointerMove(e.clientX, e.clientY);
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        onPointerMove(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    };
+
+    window.addEventListener("mousemove", handleMouseMove, { passive: true });
+    window.addEventListener("touchmove", handleTouchMove, { passive: true });
 
     // ── Animation Loop ──
     let animationFrameId: number;
@@ -168,7 +187,7 @@ export function NeuralVoiceSphere({ isPlaying = false, className = "" }: NeuralV
       const elapsed = clock.getElapsedTime();
       const playing = isPlayingRef.current;
       const speedMultiplier = playing ? 2.4 : 1.0;
-      const amplitude = playing ? 16 : 5;
+      const amplitude = playing ? (isMobile ? 12 : 16) : 5;
 
       // Smooth camera / group rotation lerp
       mouseX += (targetX - mouseX) * 0.05;
@@ -190,10 +209,11 @@ export function NeuralVoiceSphere({ isPlaying = false, className = "" }: NeuralV
         const oy = originalPositions[i3 + 1];
         const oz = originalPositions[i3 + 2];
 
-        // Spherical frequency distortion
-        const freq = Math.sin(ox * 0.04 + elapsed * 2.2 * speedMultiplier) *
-                     Math.cos(oy * 0.04 + elapsed * 1.8 * speedMultiplier) *
-                     Math.sin(oz * 0.04 + elapsed * 2.0);
+        // Frequency distortion
+        const freq =
+          Math.sin(ox * 0.04 + elapsed * 2.2 * speedMultiplier) *
+          Math.cos(oy * 0.04 + elapsed * 1.8 * speedMultiplier) *
+          Math.sin(oz * 0.04 + elapsed * 2.0);
 
         const displacement = 1 + (freq * amplitude) / baseRadius;
 
@@ -213,16 +233,22 @@ export function NeuralVoiceSphere({ isPlaying = false, className = "" }: NeuralV
       if (!container) return;
       const newWidth = container.clientWidth;
       const newHeight = container.clientHeight;
+      const mobileNow = window.innerWidth < 768;
+      const smallMobileNow = window.innerWidth < 480;
+
+      camera.position.z = smallMobileNow ? 290 : mobileNow ? 260 : 230;
       camera.aspect = newWidth / newHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(newWidth, newHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, mobileNow ? 1.5 : 2));
     };
 
     window.addEventListener("resize", handleResize);
 
     // Cleanup
     return () => {
-      window.removeEventListener("mousemove", onPointerMove);
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("touchmove", handleTouchMove);
       window.removeEventListener("resize", handleResize);
       cancelAnimationFrame(animationFrameId);
       if (container.contains(renderer.domElement)) {
@@ -242,7 +268,7 @@ export function NeuralVoiceSphere({ isPlaying = false, className = "" }: NeuralV
   return (
     <div
       ref={mountRef}
-      className={`relative w-full h-full flex items-center justify-center pointer-events-none select-none ${className}`}
+      className={`relative w-full h-full flex items-center justify-center select-none touch-none ${className}`}
     />
   );
 }

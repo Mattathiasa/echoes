@@ -42,7 +42,7 @@ export function Layout({ children }: { children: ReactNode }) {
 
       <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-8">{children}</main>
 
-      <nav className="border-t border-zinc-800 flex">
+      <nav className="border-t border-zinc-800 bg-zinc-950/95 backdrop-blur-md flex pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
         {nav.map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
